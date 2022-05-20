@@ -10,6 +10,7 @@ const env = process.env.NODE_ENV || 'development';
 enum listingStatus {
     Active = 'Active',
     Booked = 'Booked',
+    Expired = 'Expired'
 }
 
 if (env === 'development') {
@@ -32,6 +33,7 @@ app.use(express.json());
 /*** Version 1 endpoints */
 
 app.get('/v1/', (req, res) => {
+    console.log('GET /v1/');
     res.send({
         name: 'Hytch API',
         version: '1.0.0',
@@ -40,7 +42,12 @@ app.get('/v1/', (req, res) => {
 });
 
 app.get('/v1/users', (req, res) => {
-    pool.query('SELECT * FROM users;', (err, result) => {
+    const { uid } = req.query;
+    let sql = 'SELECT * FROM users';
+    if (uid) {
+        sql = `SELECT * FROM users WHERE user_id = '${uid}'`
+    };
+    pool.query(sql, (err, result) => {
         if (err) throw err;
         res.json(result.rows);
     });
@@ -54,11 +61,18 @@ app.post('/v1/users', (req, res) => {
         dob,
         bio,
         isHitcher,
+        status
     } = req.body;
-    let sql = `INSERT INTO users (user_id, first_name, last_name, dob, bio, is_hitcher) VALUES (${userId}, '${firstName}', '${lastName}', '${dob}', '${bio}', ${isHitcher});`;
+    let sql = `INSERT INTO users (user_id, first_name, last_name, dob, bio, is_hitcher, status) VALUES 
+        ('${userId}', '${firstName}', '${lastName || ''}', ${dob || null}, '${bio || ''}', 
+        ${isHitcher || true}, '${status || ''}');`;
     pool.query(sql, (err, result) => {
-        if (err) throw err;
-        res.json({status: 200, message: 'New user added'});
+        if (err) {
+            res.status(400).send(err);
+            console.log(err);
+        } else {
+            res.json({status: 200, message: 'New user added'});
+        }
     });
 });
 
@@ -97,7 +111,11 @@ app.post('/v1/messages', (req, res) => {
 
 app.get('/v1/trips/:tripId', (req, res) => {
     const { tripId } = req.params;
-    let sql = `SELECT * FROM trips WHERE trip_id = ${tripId};`;
+    if (!Number.isInteger( parseInt(tripId) )) {
+        res.status(400).send({message: 'Invalid trip id'});
+        return;
+    }
+    let sql = `SELECT * FROM trips WHERE id = ${tripId};`;
     pool.query(sql, (err, result) => {
         if (err) throw err;
         res.json(result.rows);
@@ -131,7 +149,7 @@ app.post('/v1/trips', (req, res) => {
     });
 });
 
-app.get('/v1/listings/', (req, res) => {
+app.get('/v1/listings', (req, res) => {
     const { status, lister } = req.query;
     let sql = '';
     if (Object.values(listingStatus).includes(status)) {
@@ -163,12 +181,32 @@ app.delete('/v1/listings/:id', (req, res) => {
     });
 });
 
-app.post('/v1/listings/', (req, res) => {
+app.post('/v1/listings', (req, res) => {
     const { lister, status, tripId } = req.query;
     let sql = `INSERT INTO listings (lister, status, trip_id) VALUES (${lister}, ${status}, ${tripId});`;
     pool.query(sql, (err, result) => {
         if (err) throw err;
         res.json({status: 200, message: 'New listing added'});
+    });
+});
+
+app.get('/v1/sanction', (req, res) => {
+    const { userId } = req.query;
+    let sql = `SELECT * FROM sanctions WHERE user_id = ${userId};`;
+    pool.query(sql, (err, result) => {
+        if (err) throw err;
+        res.json(result.rows);
+    });
+});
+
+app.post('/v1/sanction', (req, res) => {
+    const { userId, description } = req.body;
+    let startDate = new Date();
+    let endDate = new Date(startDate.getFullYear(), startDate.getMonth(), startDate.getDate() + 90);
+    let sql = `INSERT INTO sanctions (user_id, start_date, end_date, description) VALUES (${userId}, '${startDate}', '${endDate}', ${description});`;
+    pool.query(sql, (err, result) => {
+        if (err) throw err;
+        res.json(result.rows);
     });
 });
 

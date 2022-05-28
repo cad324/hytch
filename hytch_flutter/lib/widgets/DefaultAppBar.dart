@@ -3,7 +3,10 @@ import 'package:flutter/material.dart';
 AppBar DefaultAppBar(String title, {Builder? leading}) {
   return AppBar(
     centerTitle: false,
-    title: Text(title),
+    title: Text(
+      title,
+      style: TextStyle(fontWeight: FontWeight.bold),
+    ),
     backgroundColor: Colors.white,
     leading: leading,
     flexibleSpace: Container(

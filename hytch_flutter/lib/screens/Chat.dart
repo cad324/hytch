@@ -9,7 +9,10 @@ class ChatScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: Text('Jamie C.'),
+        title: Text(
+          'Jamie C.',
+          style: TextStyle(fontWeight: FontWeight.bold),
+        ),
         centerTitle: false,
         foregroundColor: Colors.black,
       ),

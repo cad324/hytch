@@ -6,6 +6,7 @@ const express = require('express');
 const app = express();
 const port = process.env.PORT || 3000;
 const env = process.env.NODE_ENV || 'development';
+const stripe = require('stripe')(process.env.STRIPE_SECRET_KEY);
 
 enum listingStatus {
     Active = 'Active',
@@ -208,6 +209,68 @@ app.post('/v1/sanction', (req, res) => {
         if (err) throw err;
         res.json(result.rows);
     });
+});
+
+app.get('/v1/card', (req, res) => {
+    const { uid } = req.query;
+    let sql = `SELECT stripe_id FROM users WHERE user_id = '${uid}';`;
+    let data = [];
+    pool.query(sql, async (err, result) => {
+        if (err) throw err;
+        if (result.rows.length === 1) {
+            let sources = await stripe.customers.listSources(result.rows[0]!['stripe_id']);
+            data = sources.data;
+        }
+        res.json(data);
+    });
+});
+
+app.post('/v1/card', async (req, res) => {
+    const { uuid, card_holder, cvc, exp_date, card_number } = req.body;
+    try {
+        const card = {
+            number: card_number,
+            exp_month: exp_date.split('/')[0],
+            exp_year: '20' + exp_date.split('/')[1],
+            cvc,
+        };
+        const token = await stripe.tokens.create({
+            card,
+        });
+        const source = await stripe.sources.create({
+            token: token.id,
+            usage: "reusable",
+            type: "card"
+        });
+        let sql = `SELECT * FROM users WHERE user_id = '${uuid}' and stripe_id LIKE 'cus%';`;
+        await pool.query(sql, async (err, result) => {
+            if (err) throw err;
+            if (result.rows.length === 1) {
+                const customer_id = result.rows[0].stripe_id;
+                stripe.customers.createSource(customer_id, {
+                    source: source.id,
+                });
+            } else {
+                const customer = await stripe.customers.create({
+                    source: source.id,
+                    name: card_holder,
+                    metadata: {
+                        uuid,
+                    }
+                });
+                sql = `UPDATE users SET stripe_id = '${customer.id}' WHERE user_id = '${uuid}';`;
+                await pool.query(sql, (err, result) => {
+                    if (err) throw err;
+                });
+            }
+        });
+        res.json({status: 200, message: 'Customer card linked'});
+    } catch (error) {
+        console.log("[Error adding card]: ", error);
+        res.status(400).send({
+            message: error,
+        });
+    }
 });
 
 app.listen(port, () => {

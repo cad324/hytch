@@ -1,5 +1,7 @@
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
+import 'package:hytch_flutter/screens/EditProfile.dart';
+import 'package:hytch_flutter/screens/UpdatePayment.dart';
 import 'package:hytch_flutter/widgets/DefaultAppBar.dart';
 
 class ProfilePage extends StatelessWidget {
@@ -41,8 +43,24 @@ class ProfilePage extends StatelessWidget {
                   textAlign: TextAlign.center,
                 ),
               ),
-              TileItem("Edit profile", Icons.person),
-              TileItem("Update payment information", Icons.payment),
+              TileItem("Edit profile", Icons.person, action: () {
+                Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) => EditProfileScreen(),
+                    ));
+              }),
+              TileItem(
+                "Update payment information",
+                Icons.payment,
+                action: () => {
+                  Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) => UpdatePaymentScreen(),
+                      ))
+                },
+              ),
               TileItem("Change password", Icons.lock),
               TileItem(
                 "Log out",
@@ -94,7 +112,7 @@ class ProfilePage extends StatelessWidget {
     );
   }
 
-  InkWell TileItem(
+  Container TileItem(
     String label,
     IconData leading, {
     IconData? trailing = Icons.chevron_right,
@@ -102,22 +120,32 @@ class ProfilePage extends StatelessWidget {
     void Function()? action,
     String modalLabel = "Are you sure?",
   }) {
-    return InkWell(
-      splashColor: Color.fromARGB(255, 226, 226, 226),
-      splashFactory: InkRipple.splashFactory,
-      onTap: () {
-        if (action != null) action();
-      },
-      child: ListTile(
-        leading: Icon(
-          leading,
-          color: color,
+    return Container(
+      decoration: BoxDecoration(
+        border: Border(
+          top: BorderSide(
+            color: Colors.black12,
+            width: 1,
+          ),
         ),
-        title: Text(
-          label,
-          style: TextStyle(color: color),
+      ),
+      child: InkWell(
+        splashColor: Color.fromARGB(255, 226, 226, 226),
+        splashFactory: InkRipple.splashFactory,
+        onTap: () {
+          if (action != null) action();
+        },
+        child: ListTile(
+          leading: Icon(
+            leading,
+            color: color,
+          ),
+          title: Text(
+            label,
+            style: TextStyle(color: color),
+          ),
+          trailing: Icon(trailing),
         ),
-        trailing: Icon(trailing),
       ),
     );
   }

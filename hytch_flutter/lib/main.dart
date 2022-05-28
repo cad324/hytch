@@ -10,6 +10,10 @@ import 'package:flutterfire_ui/auth.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:http/http.dart' as http;
 
+class Global {
+  static Map<String, String> strings = {};
+}
+
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await Firebase.initializeApp(
@@ -17,11 +21,12 @@ Future<void> main() async {
   );
   await dotenv.load(fileName: ".env");
   var BASE_URI = dotenv.env['BASE_URI_BACKEND'];
+  Global.strings = {"base_endpoint": BASE_URI!};
   var uid = FirebaseAuth.instance.currentUser!.uid;
   try {
     var response =
-        await http.get(Uri.http(BASE_URI!, '/v1/users', {'uid': uid}));
-    if (response.body.length != 1) {
+        await http.get(Uri.http(BASE_URI, '/v1/users', {'uid': uid}));
+    if (json.decode(response.body).length != 1) {
       var body = {
         'userId': uid,
         'firstName': FirebaseAuth.instance.currentUser!.displayName,
@@ -31,9 +36,7 @@ Future<void> main() async {
       };
       await http.post(
         Uri.http(BASE_URI, '/v1/users'),
-        headers: <String, String>{
-          'Content-Type': 'application/json; charset=UTF-8',
-        },
+        headers: <String, String>{},
         body: jsonEncode(body),
       );
     }
@@ -48,13 +51,6 @@ class MyApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    // print(
-    //   {
-    //     'name': FirebaseAuth.instance.currentUser!.displayName,
-    //     'email': FirebaseAuth.instance.currentUser!.email,
-    //     'uid': FirebaseAuth.instance.currentUser!.uid,
-    //   },
-    // );
     Uri.http('127.0.0.1:6047', '/v1/');
     const providerConfigs = [
       EmailProviderConfiguration(),
